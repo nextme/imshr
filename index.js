@@ -1,5 +1,3 @@
-
-
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
@@ -10,7 +8,7 @@ const config = require('./config.js');
 let writtenLayer = ""
 let parents = []
 
-const handler = ({filename, isDirectory, layer, parent}) => {
+const resizer = ({filename, isDirectory, layer, parent}) => {
   let bcstr = ""
   if(parent==null) parents = [];
   if(parent) {
@@ -95,6 +93,40 @@ const handler = ({filename, isDirectory, layer, parent}) => {
     }).catch(e=>console.log(e));
   }
 };
-let dir = config.folder
-console.log("Папка: ",dir)
-dt(dir, {handler, undefined, recursive: true});
+
+/**
+ *  Optimize image
+ *  
+ * 
+ */
+const optimizer = ({filename, isDirectory, layer, parent}) => {
+  console.log(filename,parent);
+  return 0;
+}
+
+let arg,resize = false,opt = false;
+if(process.argv[2]){
+  arg = process.argv[2];
+}
+else{
+  console.log('Режим не выбран. По умолчанию - изменение размера.')
+  resize = true;
+}
+switch(process.argv[2]){
+  case "opt":
+    opt = true;
+    break;
+
+  case "resize":
+  default:
+    resize = true;
+    break;
+}
+if(opt){
+  console.log("Изменение размеров в папке: ",config.folder);
+  dt(config.folder, {handler:optimizer, undefined, recursive: true});
+}
+if(resize){
+  console.log("Оптимизация изображений в папке: ",config.folder);
+  dt(config.folder, {handler:resizer, undefined, recursive: true});
+}
