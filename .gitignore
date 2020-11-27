@@ -1,0 +1,9 @@
+node_modules/
+*.jpg
+*.jpeg
+*.jpg.bak
+*.jpeg.bak
+*.png
+*.png.bak
+*.zip
+*.rar
