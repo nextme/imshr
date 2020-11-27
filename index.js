@@ -44,9 +44,10 @@ const getPath = (filename, isDirectory, layer, parent)=>{
     console.log(error)
   }
 }
+
 /**
  *  Resize images
- * @param {*} param0 
+ * @param {*} param0 Object containing <filename, isDirectory, layer, parent > from dir-traverse
  */
 const resizer = ({filename, isDirectory, layer, parent}) => {
   
@@ -114,38 +115,31 @@ const resizer = ({filename, isDirectory, layer, parent}) => {
  * 
  */
 const optimizer = ({filename, isDirectory, layer, parent}) => {
-  // console.log("Файл: "+filename)
+  console.log("Файл: "+filename)
   if(!isDirectory) total++;
-  
-  
   let f = getPath(filename, isDirectory, layer, parent);
-  
   let fp=f.filepathname
   let ext = f.ext
-  console.log(f.filepathname||"!!!!!!!!!!!!!!!!!!1",f.ext||"Dir")
-  // console.log(ext,config.types)
-    if(ext && config.types.includes(ext) ){
-      console.log("sharp: "+fp)
-      try {
-    
-        let im = sharp(fp)
-        .toFormat('jpeg', { progressive: true, quality: 50 })
-        .toFile(fp+".temp")
-        .then(info => { 
-          console.log(`Успешно конвертирован файл ${fp}`);    
-          if(config.delete_files==true){
-            fs.rmSync(fp);
-          }else{
-            fs.renameSync(fp,fp+".bak")
-          }    
-          fs.renameSync(fp+".temp",fp)
-        });
-      } catch (error) {
-        console.log(error)
-  
-      }
+  console.log(f.filepathname||"ОШИБКА!!!Нет имени файла",f.ext||"Каталог")
+  if(ext && config.types.includes(ext) ){
+    try {
+      let im = sharp(fp)
+      .toFormat('jpeg', { progressive: true, quality: config.quality })
+      .toFile(fp+".temp")
+      .then(info => { 
+        console.log(`Успешно конвертирован файл ${fp}`);    
+        if(config.delete_files==true){
+          fs.rmSync(fp);
+        }else{
+          fs.renameSync(fp,fp+".bak")
+        }    
+        fs.renameSync(fp+".temp",fp)
+      });
+    } catch (error) {
+      console.log(error)
     }
-    return 0;
+  }
+  return 0;
 }
   
 
@@ -180,5 +174,3 @@ switch(process.argv[2]){
         dt(folder, {handler:optimizer, undefined, recursive: true});
         console.log(total);
       }
-      
-      // console.error('Ошибка при открытии файла.')
