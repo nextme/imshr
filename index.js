@@ -4,41 +4,55 @@ const path = require('path');
 const dt = require('dir-traverse');
 
 const config = require('./config.js');
-
+let folder = config.folder;
 let writtenLayer = ""
 let parents = []
-
-const resizer = ({filename, isDirectory, layer, parent}) => {
-  let bcstr = ""
-  if(parent==null) parents = [];
-  if(parent) {
-    if(!parents.includes(parent)) {
-      parents.push(parent);
-      writtenLayer = layer;
-    } else {
-      while(writtenLayer>layer){
-        parents.pop();
-        writtenLayer--;
+let total=0;
+/**
+ * Returns an object with filepathname and extension for a given params   
+ * @param {String} filename Filename to get pah from
+ * @param {Boolean} isDirectory is it a folder
+ * @param {Number} layer Depth layer of the file inside folders
+ * @param {String} parent Name of the parent folder
+ */
+const getPath = (filename, isDirectory, layer, parent)=>{
+  try {
+    let bcstr = ""
+    if(parent==null) parents = [];
+    if(parent) {
+      if(!parents.includes(parent)) {
+        parents.push(parent);
+        writtenLayer = layer;
+      } else {
+        while(writtenLayer>layer){
+          parents.pop();
+          writtenLayer--;
+        }
       }
     }
-  }
-
-  // console.log(filename, isDirectory, layer, parent)
-  // console.log(parents)
-  
-  for(let i=0;i<parents.length;i++){
-    bcstr += parents[i]+'/';
-  }
-  // console.log(bcstr,writtenLayer,layer)
-  if(isDirectory) return;
-  
-  let ext = filename.split('.')[1];
-  ext = path.extname(filename).substring(1);
-  // console.log("Ext: ",ext)
-  if(ext && config.types.includes(ext) ){
-    let filepath=path.join(__dirname,config.folder,bcstr)
+    // console.log(filename, isDirectory, layer, parent)
+    // console.log(parents)
+    for(let i=0;i<parents.length;i++){
+      bcstr += parents[i]+'/';
+    }
+    let ext = filename.split('.')[1];
+    ext = path.extname(filename).substring(1);
+    let filepath=path.join(__dirname,folder,bcstr)
     let filepathname=path.join(filepath,filename)
-    console.log("Файл: "+filepathname)
+    return {filepathname,ext};
+  } catch (error) {
+    console.log(error)
+  }
+}
+/**
+ *  Resize images
+ * @param {*} param0 
+ */
+const resizer = ({filename, isDirectory, layer, parent}) => {
+  
+  let {filepathname,ext} = getPath(filename, isDirectory, layer, parent)
+  if(ext && config.types.includes(ext) ){
+    // console.log("Файл: "+filepathname)
     let im;
     try {
       im  = sharp(filepathname);
@@ -100,9 +114,41 @@ const resizer = ({filename, isDirectory, layer, parent}) => {
  * 
  */
 const optimizer = ({filename, isDirectory, layer, parent}) => {
-  console.log(filename,parent);
-  return 0;
+  // console.log("Файл: "+filename)
+  if(!isDirectory) total++;
+  
+  
+  let f = getPath(filename, isDirectory, layer, parent);
+  
+  let fp=f.filepathname
+  let ext = f.ext
+  console.log(f.filepathname||"!!!!!!!!!!!!!!!!!!1",f.ext||"Dir")
+  // console.log(ext,config.types)
+    if(ext && config.types.includes(ext) ){
+      console.log("sharp: "+fp)
+      try {
+    
+        let im = sharp(fp)
+        .toFormat('jpeg', { progressive: true, quality: 50 })
+        .toFile(fp+".temp")
+        .then(info => { 
+          console.log(`Успешно конвертирован файл ${fp}`);    
+          if(config.delete_files==true){
+            fs.rmSync(fp);
+          }else{
+            fs.renameSync(fp,fp+".bak")
+          }    
+          fs.renameSync(fp+".temp",fp)
+        });
+      } catch (error) {
+        console.log(error)
+  
+      }
+    }
+    return 0;
 }
+  
+
 
 let arg,resize = false,opt = false;
 if(process.argv[2]){
@@ -112,21 +158,27 @@ else{
   console.log('Режим не выбран. По умолчанию - изменение размера.')
   resize = true;
 }
+if(process.argv[3]){
+  folder = process.argv[3];
+}
 switch(process.argv[2]){
   case "opt":
     opt = true;
     break;
-
+    
   case "resize":
   default:
     resize = true;
     break;
 }
-if(opt){
-  console.log("Изменение размеров в папке: ",config.folder);
-  dt(config.folder, {handler:optimizer, undefined, recursive: true});
-}
-if(resize){
-  console.log("Оптимизация изображений в папке: ",config.folder);
-  dt(config.folder, {handler:resizer, undefined, recursive: true});
-}
+      if(resize){
+        console.log("Изменение размеров в папке: ",folder);
+        dt(folder, {handler:resizer, undefined, recursive: true});
+      }
+      if(opt){
+        console.log("Оптимизация изображений в папке: ",folder);
+        dt(folder, {handler:optimizer, undefined, recursive: true});
+        console.log(total);
+      }
+      
+      // console.error('Ошибка при открытии файла.')
